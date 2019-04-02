@@ -17,7 +17,7 @@
 
 """
 
-
+import numpy as np
 import sys
 import cx_Oracle
 import pandas as pd
@@ -32,15 +32,19 @@ Mapping_name='Mapping_Doc.csv'
 Final_file_name='output.csv'
 
 
+df_Mapping=pd.read_csv(Mapping_name)
+df_Mapping=df_Mapping.fillna(value='')
+
+
 #now = datetime.datetime.now()
 #Prepared_date=str(now.strftime("%Y%m%d"))+'0001'
 #df_excel = pd.read_csv(file_name,keep_default_na=False)
-df_Mapping=pd.read_csv(Mapping_name)
 #df_excel['Extract_ID']=Prepared_date
 #df_excel['Row_Insert_TS']=now
 #df_excel['NaN']=float('NAN')
 #df_excel['Source_Row_Seq'] = range(1, 1+len(df_excel))
 #Excel_column_list=list(df_excel)
+
 Source_Column_Name=df_Mapping['Source_Target_Column_Name'].tolist()
 Target_Column_Name=df_Mapping['Target_File_Column_Name'].tolist()
 
@@ -53,11 +57,18 @@ def printException (exception):
   printf ("Error message = %s\n",error.message);
 
 
-#Sql_select_statement=
-Sql_execute="Select "
-for j in Source_Column_Name:
-    Sql_execute=Sql_execute+' to_char('+ str(j)+"), "
+## Creating the sql statement 
 
+
+Sql_execute="Select "
+
+for i in range(len(Source_Column_Name)):
+    j=Source_Column_Name[i]
+    if j == '':
+        Target_Column_Name.pop(i)
+    else:    
+        Sql_execute=Sql_execute+' to_char('+ str(j)+"), "
+        
 Sql_execute=Sql_execute[:-2]
 
 
@@ -79,36 +90,17 @@ except cx_Oracle.DatabaseError as exception:
 
 
 c = conn.cursor()
+cur=conn.cursor()
 
+print('Selection will start Now')
 
-print("Selection will start Now,")
-"""
-try:
-   c.execute(Sql_execute)
-
-except cx_Oracle.DatabaseError as exception:
-  print(Sql_execute)
-  printf ('Failed to Insert into '+Target_Table_name+' ')
-  printException (exception)
-
-
-for errorObj in c.getbatcherrors():
-    print("Row", errorObj.offset, " has error ", errorObj.message)
-
-print('Selection has Ended')
-
-
-outputFile = open(Final_file_name,'w') # 'wb'
-output = csv.writer(outputFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_ALL)
-for row_data in c.fetchall(): # add table rows
-  output.writerow(row_data)
-  print(row_data)
-"""
-
+print(Sql_execute )
 
 
 try:
         c.execute( Sql_execute )
+        cur.execute('DESC '+ Target_Table_name)
+        print(cur.fetchall())
         names = [ x[0] for x in c.description]
         rows = c.fetchall()
         df_oracle =pd.DataFrame( rows, columns=Target_Column_Name)
